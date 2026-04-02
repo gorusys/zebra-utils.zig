@@ -1,0 +1,3 @@
+# Zig build cache and install prefix
+.zig-cache/
+zig-out/

@@ -1,0 +1,8 @@
+.{
+    .name = .zebra_utils,
+    .version = "0.1.0",
+    .fingerprint = 0x9e101ae55b916b7a,
+    .minimum_zig_version = "0.14.0",
+    .dependencies = .{},
+    .paths = .{"."},
+}
