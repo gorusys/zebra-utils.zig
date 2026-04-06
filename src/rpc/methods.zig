@@ -185,11 +185,11 @@ pub const Methods = struct {
     }
 };
 
-pub const MethodsError = error{ InvalidResult };
+pub const MethodsError = error{InvalidResult};
 
 fn fmtParamsHashOrNum(arena: std.mem.Allocator, s: []const u8) ![]const u8 {
     if (std.fmt.parseInt(u64, s, 10)) |h| {
-        return try std.fmt.allocPrint(arena, "[{d}]", .{h});
+        return try std.fmt.allocPrint(arena, "[\"{d}\"]", .{h});
     } else |_| {
         return try std.fmt.allocPrint(arena, "[\"{s}\"]", .{s});
     }
@@ -197,7 +197,7 @@ fn fmtParamsHashOrNum(arena: std.mem.Allocator, s: []const u8) ![]const u8 {
 
 fn fmtParamsBlock(arena: std.mem.Allocator, s: []const u8) ![]const u8 {
     if (std.fmt.parseInt(u64, s, 10)) |h| {
-        return try std.fmt.allocPrint(arena, "[{d},1]", .{h});
+        return try std.fmt.allocPrint(arena, "[\"{d}\",1]", .{h});
     } else |_| {
         return try std.fmt.allocPrint(arena, "[\"{s}\",1]", .{s});
     }
@@ -230,11 +230,11 @@ fn jsonClone(allocator: std.mem.Allocator, v: json.Value) !json.Value {
     };
 }
 
-test "params getblockhash" {
+test "params hash or height string" {
     const a = std.testing.allocator;
     const p = try fmtParamsHashOrNum(a, "12345");
     defer a.free(p);
-    try std.testing.expectEqualStrings("[12345]", p);
+    try std.testing.expectEqualStrings("[\"12345\"]", p);
 }
 
 test "params hash string" {

@@ -31,6 +31,34 @@ fn strOpt(allocator: std.mem.Allocator, v: json.Value, key: []const u8) TypesErr
     };
 }
 
+fn strOrIntAsDecStr(allocator: std.mem.Allocator, v: json.Value, key: []const u8) TypesError![]const u8 {
+    const f = v.get(key) orelse return error.MissingField;
+    return switch (f) {
+        .string => |s| allocator.dupe(u8, s) catch return error.OutOfMemory,
+        .int => |n| if (n < 0) error.WrongType else std.fmt.allocPrint(allocator, "{d}", .{n}) catch return error.OutOfMemory,
+        else => error.WrongType,
+    };
+}
+
+fn u32fOpt(v: json.Value, key: []const u8) ?u32 {
+    const f = v.get(key) orelse return null;
+    return switch (f) {
+        .int => |n| std.math.cast(u32, n),
+        else => null,
+    };
+}
+
+fn i64FromFirstIntField(v: json.Value, keys: []const []const u8) i64 {
+    for (keys) |key| {
+        const f = v.get(key) orelse continue;
+        switch (f) {
+            .int => |n| return n,
+            else => {},
+        }
+    }
+    return 0;
+}
+
 fn u64f(v: json.Value, key: []const u8) TypesError!u64 {
     const f = v.get(key) orelse return error.MissingField;
     return switch (f) {
@@ -110,7 +138,7 @@ pub const BlockchainInfo = struct {
             .best_block_hash = best,
             .difficulty = try f64f(v, "difficulty"),
             .verification_progress = try f64f(v, "verificationprogress"),
-            .chain_work = try str(allocator, v, "chainwork"),
+            .chain_work = try strOrIntAsDecStr(allocator, v, "chainwork"),
             .pruned = try boolf(v, "pruned"),
             .consensus = .{ .chain_tip = chain_tip, .next_block = next_block },
         };
@@ -211,30 +239,30 @@ pub const PeerInfo = struct {
     ping_time: ?f64,
 
     pub fn fromJson(allocator: std.mem.Allocator, v: json.Value) TypesError!PeerInfo {
-        const services_v = v.get("services") orelse return error.MissingField;
-        const serv: []const u8 = switch (services_v) {
+        const serv: []const u8 = if (v.get("services")) |services_v| switch (services_v) {
             .string => |s| allocator.dupe(u8, s) catch return error.OutOfMemory,
             .int => |n| std.fmt.allocPrint(allocator, "{d}", .{n}) catch return error.OutOfMemory,
             else => return error.WrongType,
-        };
+        } else try allocator.dupe(u8, "");
         const ping = v.get("pingtime");
         const ping_time: ?f64 = if (ping) |p| switch (p) {
             .float => |x| x,
             .int => |n| @floatFromInt(n),
             else => null,
         } else null;
+        const addr_local = (try strOpt(allocator, v, "addrlocal")) orelse
+            (try strOpt(allocator, v, "addr_local")) orelse
+            try allocator.dupe(u8, "");
+        const subver = (try strOpt(allocator, v, "subver")) orelse try allocator.dupe(u8, "");
         return .{
-            .id = try u32f(v, "id"),
+            .id = u32fOpt(v, "id") orelse 0,
             .addr = try str(allocator, v, "addr"),
-            .addr_local = str(allocator, v, "addrlocal") catch |err| switch (err) {
-                error.MissingField => try str(allocator, v, "addr_local"),
-                else => |e| return e,
-            },
+            .addr_local = addr_local,
             .services = serv,
-            .version = try u32f(v, "version"),
-            .subver = try str(allocator, v, "subver"),
+            .version = u32fOpt(v, "version") orelse 0,
+            .subver = subver,
             .inbound = try boolf(v, "inbound"),
-            .connection_time = try i64f(v, "connectiontime"),
+            .connection_time = i64FromFirstIntField(v, &.{ "connectiontime", "connection_time" }),
             .ping_time = ping_time,
         };
     }
@@ -316,14 +344,12 @@ pub const TreeState = struct {
         const orch = v.get("orchard") orelse return error.MissingField;
         const sap_c = sap.get("commitments") orelse return error.MissingField;
         const orch_c = orch.get("commitments") orelse return error.MissingField;
-        const sap_fs = str(allocator, sap_c, "finalState") catch |err| switch (err) {
-            error.MissingField => try str(allocator, sap_c, "final_state"),
-            else => |e| return e,
-        };
-        const orch_fs = str(allocator, orch_c, "finalState") catch |err| switch (err) {
-            error.MissingField => try str(allocator, orch_c, "final_state"),
-            else => |e| return e,
-        };
+        const sap_fs = (try strOpt(allocator, sap_c, "finalState")) orelse
+            (try strOpt(allocator, sap_c, "final_state")) orelse
+            try allocator.dupe(u8, "");
+        const orch_fs = (try strOpt(allocator, orch_c, "finalState")) orelse
+            (try strOpt(allocator, orch_c, "final_state")) orelse
+            try allocator.dupe(u8, "");
         return .{
             .hash = try str(allocator, v, "hash"),
             .height = try u64f(v, "height"),
@@ -371,6 +397,59 @@ test "BlockchainInfo fixture" {
         a.free(@constCast(b.consensus.next_block));
     }
     try std.testing.expectEqualStrings("main", b.chain);
+}
+
+test "BlockchainInfo chainwork as integer (Zebra)" {
+    const a = std.testing.allocator;
+    var v = try json.parse(a,
+        \\{"chain":"main","blocks":1,"headers":1,"bestblockhash":"abc","difficulty":1.0,"verificationprogress":0.1,"chainwork":0,"pruned":false,"consensus":{"chaintip":"t1","nextblock":"n1"}}
+    );
+    defer v.deinit(a);
+    const b = try BlockchainInfo.fromJson(a, v);
+    defer {
+        a.free(@constCast(b.chain));
+        a.free(@constCast(b.best_block_hash));
+        a.free(@constCast(b.chain_work));
+        a.free(@constCast(b.consensus.chain_tip));
+        a.free(@constCast(b.consensus.next_block));
+    }
+    try std.testing.expectEqualStrings("0", b.chain_work);
+}
+
+test "TreeState empty commitments (Zebra z_gettreestate)" {
+    const a = std.testing.allocator;
+    var v = try json.parse(a,
+        \\{"hash":"0000ab","height":1,"time":1,"sapling":{"commitments":{}},"orchard":{"commitments":{}}}
+    );
+    defer v.deinit(a);
+    const t = try TreeState.fromJson(a, v);
+    defer {
+        a.free(@constCast(t.hash));
+        a.free(@constCast(t.sapling.commitments.final_state));
+        a.free(@constCast(t.orchard.commitments.final_state));
+    }
+    try std.testing.expectEqualStrings("0000ab", t.hash);
+    try std.testing.expectEqualStrings("", t.sapling.commitments.final_state);
+    try std.testing.expectEqualStrings("", t.orchard.commitments.final_state);
+}
+
+test "PeerInfo minimal (Zebra getpeerinfo)" {
+    const a = std.testing.allocator;
+    var v = try json.parse(a,
+        \\{"addr":"1.2.3.4:8233","inbound":false,"pingtime":0.1}
+    );
+    defer v.deinit(a);
+    const p = try PeerInfo.fromJson(a, v);
+    defer {
+        a.free(@constCast(p.addr));
+        a.free(@constCast(p.addr_local));
+        a.free(@constCast(p.services));
+        a.free(@constCast(p.subver));
+    }
+    try std.testing.expectEqual(@as(u32, 0), p.id);
+    try std.testing.expectEqualStrings("1.2.3.4:8233", p.addr);
+    try std.testing.expectEqual(false, p.inbound);
+    try std.testing.expect(p.ping_time != null);
 }
 
 test "wrong type" {
