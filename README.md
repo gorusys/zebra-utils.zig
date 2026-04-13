@@ -21,7 +21,7 @@ zig build -Doptimize=ReleaseSafe
 
 Artifacts install to `zig-out/bin/`. All binaries are linked **without libc** (`link_libc = false`).
 
-**Optional dependency (for future / `zebra-scan`):** add [`zcash-addr.zig`](https://github.com/gorusys/zcash-addr.zig) via `build.zig.zon` and wire the module into tools that need transparent/sapling/unified address parsing.
+**Build dependency:** [`zcash-addr.zig`](https://github.com/gorusys/zcash-addr.zig) is required to build (see `build.zig.zon`). By default it is expected as a sibling checkout at `../zcash-addr.zig`; adjust the path or use `zig fetch` if you keep it elsewhere.
 
 ---
 
@@ -51,12 +51,12 @@ zebra-cli --format compact --no-color tip
 | Binary | Status | Purpose |
 |--------|--------|---------|
 | **zebra-cli** | **Implemented** | General RPC CLI: info, chain, blocks, tx, mempool, peers, network, treestate, ping, broadcast |
-| **zebra-watch** | Planned | Live dashboard (refresh interval, sync/mempool/peers summary) |
-| **zebra-rpc-diff** | Planned | Same RPC call against two endpoints; field-level JSON diff |
-| **zebra-scan** | Planned | Scan block ranges for transparent outputs touching given addresses (`zcash-addr.zig`) |
-| **zebra-checkpoint** | Planned | Emit block-hash checkpoints on an interval (for tooling / verification workflows) |
+| **zebra-watch** | Stub | Installed binary; behavior not implemented yet (see roadmap) |
+| **zebra-rpc-diff** | Stub | Installed binary; behavior not implemented yet |
+| **zebra-scan** | Stub | Installed binary; `zcash-addr` linked; scanner not implemented yet |
+| **zebra-checkpoint** | Stub | Installed binary; behavior not implemented yet |
 
-Detailed references below focus on **zebra-cli** (current); others match the intended CLI shapes in the project roadmap.
+Detailed references below focus on **zebra-cli** (current); other tools are placeholders until their roadmap rows land.
 
 ---
 
@@ -172,7 +172,7 @@ zig build test     # library + unit tests (JSON, client helpers, types, fmt, ans
 |-------|-------------|--------|
 | **Done** | Core library: `json`, `client`, `types`, `methods`, `config`, `fmt`, `ansi` | Unit tests; no libc |
 | **Done** | **`zebra-cli`** | Arg parsing, main RPC commands, table/json/compact output |
-| **Next** | **`build.zig`**: all five executables + `zcash-addr` module for scan | Align `build.zig.zon` with sibling path or `zig fetch` |
+| **Done** | **`build.zig`**: five executables + `zcash_addr` for `zebra-scan` | Sibling `../zcash-addr.zig` or change `build.zig.zon`; stubs print `--help` |
 | **Next** | **`zebra-watch`** | 5s (configurable) refresh, SIGINT, offline handling |
 | **Next** | **`zebra-rpc-diff`** | Two-node JSON tree diff, optional verbose match lines |
 | **Next** | **`zebra-scan`** | Block iteration, `gettxout` / verbose block tx introspection, CSV/table/json |
