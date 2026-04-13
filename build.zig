@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) void {
         imports: []const std.Build.Module.Import,
     }{
         .{ .name = "zebra-cli", .root = b.path("src/bin/zebra_cli.zig"), .imports = zebra_only },
-        .{ .name = "zebra-watch", .root = b.path("src/bin/zebra_watch.zig"), .imports = no_imports },
+        .{ .name = "zebra-watch", .root = b.path("src/bin/zebra_watch.zig"), .imports = zebra_only },
         .{ .name = "zebra-rpc-diff", .root = b.path("src/bin/zebra_rpc_diff.zig"), .imports = no_imports },
         .{ .name = "zebra-scan", .root = b.path("src/bin/zebra_scan.zig"), .imports = scan_imports },
         .{ .name = "zebra-checkpoint", .root = b.path("src/bin/zebra_checkpoint.zig"), .imports = no_imports },

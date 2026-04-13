@@ -51,12 +51,12 @@ zebra-cli --format compact --no-color tip
 | Binary | Status | Purpose |
 |--------|--------|---------|
 | **zebra-cli** | **Implemented** | General RPC CLI: info, chain, blocks, tx, mempool, peers, network, treestate, ping, broadcast |
-| **zebra-watch** | Stub | Installed binary; behavior not implemented yet (see roadmap) |
+| **zebra-watch** | **Implemented** | Live dashboard with configurable refresh, Ctrl+C exit, and offline retry |
 | **zebra-rpc-diff** | Stub | Installed binary; behavior not implemented yet |
 | **zebra-scan** | Stub | Installed binary; `zcash-addr` linked; scanner not implemented yet |
 | **zebra-checkpoint** | Stub | Installed binary; behavior not implemented yet |
 
-Detailed references below focus on **zebra-cli** (current); other tools are placeholders until their roadmap rows land.
+Detailed references below focus on **zebra-cli** and **zebra-watch** (current); other tools remain placeholders until their roadmap rows land.
 
 ---
 
@@ -172,8 +172,8 @@ zig build test     # library + unit tests (JSON, client helpers, types, fmt, ans
 |-------|-------------|--------|
 | **Done** | Core library: `json`, `client`, `types`, `methods`, `config`, `fmt`, `ansi` | Unit tests; no libc |
 | **Done** | **`zebra-cli`** | Arg parsing, main RPC commands, table/json/compact output |
-| **Done** | **`build.zig`**: five executables + `zcash_addr` for `zebra-scan` | Sibling `../zcash-addr.zig` or change `build.zig.zon`; stubs print `--help` |
-| **Next** | **`zebra-watch`** | 5s (configurable) refresh, SIGINT, offline handling |
+| **Done** | **`build.zig`**: five executables + `zcash_addr` for `zebra-scan` | Sibling `../zcash-addr.zig` or change `build.zig.zon`; non-implemented tools print `--help` |
+| **Done** | **`zebra-watch`** | 5s default (configurable) refresh, SIGINT, offline handling |
 | **Next** | **`zebra-rpc-diff`** | Two-node JSON tree diff, optional verbose match lines |
 | **Next** | **`zebra-scan`** | Block iteration, `gettxout` / verbose block tx introspection, CSV/table/json |
 | **Next** | **`zebra-checkpoint`** | Interval checkpoints, stderr progress |
